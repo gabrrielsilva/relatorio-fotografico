@@ -7,7 +7,7 @@
 ## Como usar
 
 - Crie uma pasta chamada **photos** no diretório principal
-- Coloque na pasta as fotos renomeadas, seguindo o seguinte padrão: 1.1.png, 1.2.png, 2.1.png, 2.2.png...
+- Coloque na pasta as fotos renomeadas, seguindo o seguinte padrão: 01.1.png, 01.2.png, 02.1.png, 02.2.png...
 - Abra um terminal, vá até o diretório principal:
 
 ```sh

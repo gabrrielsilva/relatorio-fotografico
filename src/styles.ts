@@ -18,7 +18,7 @@ export const styles: StyleDictionary = {
 
   columns: {
     alignment: 'center',
-    margin: [25, 0, 25, 10],
+    margin: [25, 15, 25, 15],
   },
 
   titlePhotoTable: {

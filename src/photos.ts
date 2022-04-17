@@ -7,30 +7,30 @@ const photoWidth = 120;
 const photoHeight = 150;
 const photoGap = 30;
 
-const photosInRightColumn: number[] = [];
-const photosInLeftColumn: number[] = [];
+const photosInLeftColumn: string[] = [];
+const photosInRightColumn: string[] = [];
 
 fs.readdir('photos', async (err, files) => {
   for await (const file of files) {
     const name = file.split('.'); // 20 . 1 . png
 
     if (Number(name[0]) % 2 === 0)
-      photosInRightColumn.push(Number(name[0] + '.' + name[1])); // even
+      photosInRightColumn.push(`${name[0]}.${name[1]}`); // even
 
     if (Number(name[0]) % 2 !== 0)
-      photosInLeftColumn.push(Number(name[0] + '.' + name[1])); // odd
+      photosInLeftColumn.push(`${name[0]}.${name[1]}`); // odd
   }
 
-  const photoChunckInLeftColumn: number[][] =
+  const photoChunckInLeftColumn: string[][] =
     groupTwoPhotos(photosInLeftColumn);
 
-  const photoChunckInRightColumn: number[][] =
+  const photoChunckInRightColumn: string[][] =
     groupTwoPhotos(photosInRightColumn);
 
   createColumns(photoChunckInLeftColumn, photoChunckInRightColumn);
 });
 
-function groupTwoPhotos(arr: number[]) {
+function groupTwoPhotos(arr: string[]) {
   let chunks = [],
     i = 0,
     n = arr.length;
@@ -43,14 +43,14 @@ function groupTwoPhotos(arr: number[]) {
 }
 
 function createColumns(
-  photoChunckInLeftColumn: number[][],
-  photoChunckInRightColumn: number[][]
+  photoChunckInLeftColumn: string[][],
+  photoChunckInRightColumn: string[][]
 ) {
   photoChunckInLeftColumn.forEach((leftAndRightPhotoInLeftColumn, index) => {
     const leftAndRightPhotoInRightColumn = photoChunckInRightColumn[index];
 
     let pageBreak;
-    if (photos.length % 4 === 0 && photos.length > 2) {
+    if (photos.length % 4 === 0) {
       pageBreak = 'after';
     }
 
@@ -67,9 +67,7 @@ function createColumns(
                 {
                   style: 'titlePhotoTable',
                   colSpan: 2,
-                  text: `Poste ${parseInt(
-                    leftAndRightPhotoInLeftColumn[0].toString()
-                  )}`,
+                  text: `Poste ${parseInt(leftAndRightPhotoInLeftColumn[0])}`,
                 },
                 '',
               ],
@@ -98,9 +96,7 @@ function createColumns(
                 {
                   style: 'titlePhotoTable',
                   colSpan: 2,
-                  text: `Poste ${parseInt(
-                    leftAndRightPhotoInRightColumn[0].toString()
-                  )}`,
+                  text: `Poste ${parseInt(leftAndRightPhotoInRightColumn[0])}`,
                 },
                 '',
               ],
