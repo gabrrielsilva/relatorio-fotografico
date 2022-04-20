@@ -2,7 +2,7 @@ import { StyleDictionary } from 'pdfmake/interfaces';
 
 export const styles: StyleDictionary = {
   header: {
-    margin: [0, 0, 0, 15],
+    margin: [0, 0, 0, 0],
   },
 
   titleHeader: {
@@ -18,7 +18,7 @@ export const styles: StyleDictionary = {
 
   columns: {
     alignment: 'center',
-    margin: [25, 15, 25, 15],
+    margin: [25, 0, 25, 10],
   },
 
   titlePhotoTable: {

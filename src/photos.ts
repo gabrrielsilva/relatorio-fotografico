@@ -10,8 +10,8 @@ const photoGap = 30;
 const photosInLeftColumn: string[] = [];
 const photosInRightColumn: string[] = [];
 
-fs.readdir('photos', async (err, files) => {
-  for await (const file of files) {
+fs.readdir('photos', (err, files) => {
+  for (const file of files) {
     const name = file.split('.'); // 20 . 1 . png
 
     if (Number(name[0]) % 2 === 0)
@@ -21,11 +21,8 @@ fs.readdir('photos', async (err, files) => {
       photosInLeftColumn.push(`${name[0]}.${name[1]}`); // odd
   }
 
-  const photoChunckInLeftColumn: string[][] =
-    groupTwoPhotos(photosInLeftColumn);
-
-  const photoChunckInRightColumn: string[][] =
-    groupTwoPhotos(photosInRightColumn);
+  const photoChunckInLeftColumn = groupTwoPhotos(photosInLeftColumn);
+  const photoChunckInRightColumn = groupTwoPhotos(photosInRightColumn);
 
   createColumns(photoChunckInLeftColumn, photoChunckInRightColumn);
 });
@@ -50,9 +47,11 @@ function createColumns(
     const leftAndRightPhotoInRightColumn = photoChunckInRightColumn[index];
 
     let pageBreak;
-    if (photos.length % 4 === 0) {
-      pageBreak = 'after';
+    if (photos.length % 4 === 0 && photos.length !== 0) {
+      pageBreak = 'before';
     }
+
+    console.log(photos.length, pageBreak);
 
     const leftAndRightColumnWithleftAndRightPhotosInARow = {
       style: 'columns',

@@ -10,9 +10,11 @@ const printer = new PdfPrinter(fonts);
 const docDefinition: TDocumentDefinitions = {
   pageSize: 'A4',
   pageOrientation: 'portrait',
-  pageMargins: [0, 0, 0, 0],
+  pageMargins: [0, 95, 0, 0],
 
-  content: [header, photos],
+  header,
+
+  content: [photos],
 
   styles,
 };
@@ -21,4 +23,4 @@ setTimeout(() => {
   const pdfDoc = printer.createPdfKitDocument(docDefinition);
   pdfDoc.pipe(fs.createWriteStream('export/document.pdf'));
   pdfDoc.end();
-}, 500);
+}, 1000);

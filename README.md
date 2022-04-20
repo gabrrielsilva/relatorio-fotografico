@@ -20,6 +20,8 @@ cd caminho-do-diretorio/relatorio-fotografico
 npm install
 ```
 
+- Altere as informações do projeto abrindo o arquivo **data.ts**, que está dentro da pasta **src**, em um editor de texto
+
 - Execute o script:
 
 ```sh
@@ -27,3 +29,7 @@ npm run create
 ```
 
 - E... pronto! Uma pasta chamada **export** foi gerada, seu relatório está dentro dela 😉
+
+## Observações
+
+A parte de renomear as fotos é provisória, construí este projeto para resolver um problema pessoal no trabalho (fazer relatórios fotográficos enormes e repetitivos), ainda não encontramos um jeito de ordenar as fotos, devido as circunstâncias atuais, penso que isso pode ser resolvido acessando os metadados da foto na origem. Em breve atualizações...
