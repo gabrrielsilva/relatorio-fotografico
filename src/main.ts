@@ -23,4 +23,4 @@ setTimeout(() => {
   const pdfDoc = printer.createPdfKitDocument(docDefinition);
   pdfDoc.pipe(fs.createWriteStream('export/document.pdf'));
   pdfDoc.end();
-}, 1000);
+}, 15000);

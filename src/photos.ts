@@ -1,5 +1,9 @@
+import decompress from 'decompress';
+import dotenv from 'dotenv';
 import fs from 'fs';
 import './styles';
+import { convertKmlToGeoJson } from './toGeoJson';
+dotenv.config();
 
 export const photos: any[] = [];
 
@@ -7,51 +11,151 @@ const photoWidth = 120;
 const photoHeight = 150;
 const photoGap = 30;
 
-const photosInLeftColumn: string[] = [];
-const photosInRightColumn: string[] = [];
+const inputFileDir = 'kmz';
+const inputFile = fs.readdirSync(inputFileDir);
+const kmlAndCloudMediaDir = 'src/kml-cloud-media';
 
-fs.readdir('photos', (err, files) => {
-  for (const file of files) {
-    const name = file.split('.'); // 20 . 1 . png
+let poleAmount = 0;
+let photosAmount = 0;
+let polesWithoutPhoto = 0;
+let ignoredMarkers = 0;
 
-    if (Number(name[0]) % 2 === 0)
-      photosInRightColumn.push(`${name[0]}.${name[1]}`); // even
+(async () => {
+  for await (const file of inputFile) {
+    fs.copyFileSync(
+      `${inputFileDir}/${file}`,
+      `${kmlAndCloudMediaDir}/${file}`
+    );
 
-    if (Number(name[0]) % 2 !== 0)
-      photosInLeftColumn.push(`${name[0]}.${name[1]}`); // odd
+    fs.renameSync(
+      `${kmlAndCloudMediaDir}/${file}`,
+      `${kmlAndCloudMediaDir}/${file}.zip`
+    );
+
+    // decompress to get the kml file and media folder
+    await decompress(
+      `${kmlAndCloudMediaDir}/${file}.zip`,
+      `${kmlAndCloudMediaDir}`
+    );
+
+    fs.rmSync(`${kmlAndCloudMediaDir}/${file}.zip`);
+
+    const cloudMediaDir = `${kmlAndCloudMediaDir}/cloud_media`;
+    const cloudMediaFiles = fs.readdirSync(cloudMediaDir);
+
+    photosAmount = cloudMediaFiles.length;
+
+    for (const file of cloudMediaFiles) {
+      fs.renameSync(`${cloudMediaDir}/${file}`, `${cloudMediaDir}/${file}.png`);
+    }
   }
 
-  const photoChunckInLeftColumn = groupTwoPhotos(photosInLeftColumn);
-  const photoChunckInRightColumn = groupTwoPhotos(photosInRightColumn);
+  const geoJson = await convertKmlToGeoJson(`${kmlAndCloudMediaDir}/doc.kml`);
 
-  createColumns(photoChunckInLeftColumn, photoChunckInRightColumn);
-});
+  geoJson.features.forEach((marker: any) => {
+    const pole = marker.properties.name as string;
 
-function groupTwoPhotos(arr: string[]) {
-  let chunks = [],
-    i = 0,
-    n = arr.length;
+    const photos = marker.properties.com_exlyo_mapmarker_images_with_ext as
+      | string
+      | undefined;
+    const coordinates = marker.geometry.coordinates as Array<number>;
 
-  while (i < n) {
-    chunks.push(arr.slice(i, (i += 2)));
+    let leftPhoto;
+    let rightPhoto;
+
+    if (photos !== undefined) {
+      const photosObj = JSON.parse(photos as string);
+      leftPhoto = photosObj[0];
+      rightPhoto = photosObj[1];
+    } else {
+      leftPhoto = undefined;
+      rightPhoto = undefined;
+    }
+
+    if (pole && Number(pole)) {
+      poleAmount++;
+      setLeftAndRightPhotos(Number(pole), coordinates, leftPhoto, rightPhoto);
+    } else {
+      ignoredMarkers++;
+      console.log(`Marcador nomeado "${pole}" foi ignorado`);
+    }
+  });
+})();
+
+function setLeftAndRightPhotos(
+  pole: number,
+  coordinates: number[],
+  leftPhoto: any,
+  rightPhoto: any
+) {
+  let leftPhotoPath: string = '';
+  let rightPhotoPath: string = '';
+
+  const noPhotoPath = 'src/static/images/no-photo-infinitel.png';
+  const photosDir = 'src/kml-cloud-media/';
+
+  if (leftPhoto && rightPhoto) {
+    leftPhotoPath = `${photosDir}${leftPhoto.file_rel_path}${leftPhoto.file_extension}`;
+    rightPhotoPath = `${photosDir}${rightPhoto.file_rel_path}${rightPhoto.file_extension}`;
   }
 
-  return chunks;
+  if (leftPhoto && !rightPhoto) {
+    leftPhotoPath = `${photosDir}${leftPhoto.file_rel_path}${leftPhoto.file_extension}`;
+    rightPhotoPath = noPhotoPath;
+  }
+
+  if (!leftPhoto && rightPhoto) {
+    leftPhotoPath = noPhotoPath;
+    rightPhotoPath = `${photosDir}${rightPhoto.file_rel_path}${rightPhoto.file_extension}`;
+  }
+
+  if (!leftPhoto && !rightPhoto) {
+    polesWithoutPhoto++;
+    leftPhotoPath = noPhotoPath;
+    rightPhotoPath = noPhotoPath;
+  }
+
+  splitColumns(pole, coordinates, leftPhotoPath, rightPhotoPath);
+}
+
+let polesInLeftColumn: any[][] = [];
+let polesInRightColumn: any[][] = [];
+
+function splitColumns(
+  pole: number,
+  coordinates: number[],
+  leftPhotoPath: string,
+  rightPhotoPath: string
+) {
+  if (pole % 2 !== 0) {
+    polesInLeftColumn.push([pole, coordinates, leftPhotoPath, rightPhotoPath]);
+  } else if (pole % 2 === 0) {
+    polesInRightColumn.push([pole, coordinates, leftPhotoPath, rightPhotoPath]);
+  } else {
+    console.log('Algum poste está nomeado incorretamente');
+  }
+
+  const polesAmountInMemory =
+    polesInLeftColumn.length + polesInRightColumn.length;
+
+  // fuck the memory. ps: nodejs streams
+
+  if (polesAmountInMemory === 100) {
+    createColumns(polesInLeftColumn, polesInRightColumn);
+  }
 }
 
 function createColumns(
-  photoChunckInLeftColumn: string[][],
-  photoChunckInRightColumn: string[][]
+  polesInLeftColumn: any[][],
+  polesInRightColumn: any[][]
 ) {
-  photoChunckInLeftColumn.forEach((leftAndRightPhotoInLeftColumn, index) => {
-    const leftAndRightPhotoInRightColumn = photoChunckInRightColumn[index];
+  polesInLeftColumn.forEach((photoTableInLeftColumn, index) => {
+    const photoTableInRightColumn = polesInRightColumn[index];
 
     let pageBreak;
     if (photos.length % 4 === 0 && photos.length !== 0) {
       pageBreak = 'before';
     }
-
-    console.log(photos.length, pageBreak);
 
     const leftAndRightColumnWithleftAndRightPhotosInARow = {
       style: 'columns',
@@ -66,18 +170,24 @@ function createColumns(
                 {
                   style: 'titlePhotoTable',
                   colSpan: 2,
-                  text: `Poste ${parseInt(leftAndRightPhotoInLeftColumn[0])}`,
+                  text: `Poste ${parseInt(
+                    photoTableInLeftColumn[0]
+                  )} | Lat. ${parseFloat(
+                    photoTableInLeftColumn[1][1].toFixed(4)
+                  )} Lon. ${parseFloat(
+                    photoTableInLeftColumn[1][0].toFixed(4)
+                  )}`,
                 },
                 '',
               ],
               [
                 {
-                  image: `photos/${leftAndRightPhotoInLeftColumn[0]}.png`,
+                  image: photoTableInLeftColumn[2],
                   width: photoWidth,
                   height: photoHeight,
                 },
                 {
-                  image: `photos/${leftAndRightPhotoInLeftColumn[1]}.png`,
+                  image: photoTableInLeftColumn[3],
                   width: photoWidth,
                   height: photoHeight,
                 },
@@ -95,18 +205,24 @@ function createColumns(
                 {
                   style: 'titlePhotoTable',
                   colSpan: 2,
-                  text: `Poste ${parseInt(leftAndRightPhotoInRightColumn[0])}`,
+                  text: `Poste ${parseInt(
+                    photoTableInRightColumn[0]
+                  )} | Lat. ${parseFloat(
+                    photoTableInRightColumn[1][1].toFixed(4)
+                  )} Lon. ${parseFloat(
+                    photoTableInRightColumn[1][0].toFixed(4)
+                  )}`,
                 },
                 '',
               ],
               [
                 {
-                  image: `photos/${leftAndRightPhotoInRightColumn[0]}.png`,
+                  image: photoTableInRightColumn[2],
                   width: photoWidth,
                   height: photoHeight,
                 },
                 {
-                  image: `photos/${leftAndRightPhotoInRightColumn[1]}.png`,
+                  image: photoTableInRightColumn[3],
                   width: photoWidth,
                   height: photoHeight,
                 },
@@ -122,3 +238,10 @@ function createColumns(
     photos.push(leftAndRightColumnWithleftAndRightPhotosInARow);
   });
 }
+
+setTimeout(() => {
+  console.log('Quantidade de postes:', poleAmount);
+  console.log('Total de fotos no KMZ:', photosAmount);
+  console.log('Postes sem foto:', polesWithoutPhoto);
+  console.log('Marcadores ignorados:', ignoredMarkers);
+}, 15000);
