@@ -6,8 +6,7 @@
 
 ## Como usar
 
-- Crie uma pasta chamada **photos** no diretório principal
-- Coloque na pasta as fotos renomeadas, seguindo o seguinte padrão: 01.1.png, 01.2.png, 02.1.png, 02.2.png...
+- Coloque um arquivo **kmz** na pasta **input** do diretório principal, este kmz deve ter uma pasta com todos os marcadores renomeados em ordem crescente (1, 2, 3...) e de preferência as duas fotos do poste em cada marcador (se um poste não tiver alguma ou as duas fotos, será usada uma foto padrão Infinitel).
 - Abra um terminal, vá até o diretório principal:
 
 ```sh
@@ -20,7 +19,7 @@ cd caminho-do-diretorio/relatorio-fotografico
 npm install
 ```
 
-- Altere as informações do projeto abrindo o arquivo **data.ts**, que está dentro da pasta **src**, em um editor de texto
+- Altere as informações do projeto abrindo o arquivo **data.ts** que está dentro da pasta **src**, em um editor de texto (isso será alterado futuramente, onde as informações do projeto serão preenchidas através do terminal, uma Command-Line Interface)
 
 - Execute o script:
 
@@ -28,12 +27,8 @@ npm install
 npm run create
 ```
 
-- E... pronto! Uma pasta chamada **export** foi gerada, seu relatório está dentro dela 😉
+- E... pronto! Seu relatório está dentro da pasta **output** 😉
 
 Ele se parece com isso:
 
 ![alt text](https://github.com/gabrrielsilva/relatorio-fotografico/blob/main/example.png?raw=true)
-
-## Observações
-
-A parte de renomear as fotos é provisória, construí este projeto para resolver um problema pessoal no trabalho (fazer relatórios fotográficos enormes e repetitivos), ainda não encontramos um jeito de ordenar as fotos, devido as circunstâncias atuais, penso que isso pode ser resolvido acessando os metadados da foto na origem. Em breve atualizações...

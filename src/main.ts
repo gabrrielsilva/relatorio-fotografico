@@ -14,6 +14,18 @@ const photoWidth = 120;
 const photoHeight = 150;
 const photoGap = 30;
 
+// export type HeaderData = {
+//   tipo: string;
+//   projeto: string;
+//   localidade: string;
+//   idSgiOuGlSgp: string;
+//   data: string;
+//   siteOuAbord: string;
+//   versao: string;
+// };
+
+// const headerData: HeaderData = {} as HeaderData;
+
 const docDefinition: TDocumentDefinitions = {
   pageSize: 'A4',
   pageOrientation: 'portrait',
@@ -28,11 +40,12 @@ const docDefinition: TDocumentDefinitions = {
 
 const printer = new PdfPrinter(fonts);
 const merger = new PDFMerger();
+const pdfsToMergeDir = 'src/pdfs-to-merge';
 
 let polesInPdf = 96;
 let polesAmount = 0;
 
-const inputFileDir = 'kmz';
+const inputFileDir = 'input';
 const inputFile = fs.readdirSync(inputFileDir);
 const kmlAndCloudMediaDir = 'src/kml-cloud-media';
 
@@ -45,6 +58,33 @@ let ignoredMarkers = 0;
 (async () => {
   const file = inputFile[0];
 
+  if (file) {
+    checkInputFileExtension(file);
+  } else {
+    throw new Error('Coloque um arquivo kmz na pasta input');
+    // console.log('Coloque o arquivo kmz na pasta input');
+
+    // const watcher = fs.watch(inputFileDir, (changeType, file) => {
+    //   if (changeType === 'rename') {
+    //     watcher.close();
+    //     checkInputFileExtension(file);
+    //   }
+    // });
+  }
+})();
+
+function checkInputFileExtension(file: string) {
+  const extension = file.split('.').pop();
+
+  if (extension === 'kmz') {
+    console.log('Kmz detectado...');
+    extractKmlFileAndMediaFolder(file);
+  } else {
+    throw new Error('O arquivo de entrada não é um kmz!');
+  }
+}
+
+async function extractKmlFileAndMediaFolder(file: string) {
   fs.copyFileSync(`${inputFileDir}/${file}`, `${kmlAndCloudMediaDir}/${file}`);
 
   fs.renameSync(
@@ -81,7 +121,7 @@ let ignoredMarkers = 0;
   }
 
   getGeoJsonFromKmlFile();
-})();
+}
 
 async function getGeoJsonFromKmlFile() {
   const geoJson = await convertKmlToGeoJson(`${kmlAndCloudMediaDir}/doc.kml`);
@@ -311,7 +351,9 @@ async function createPdf() {
     pdfNumber++;
 
     const pdfDoc = printer.createPdfKitDocument(docDefinition);
-    const writeStream = fs.createWriteStream(`export/${pdfNumber}.pdf`);
+    const writeStream = fs.createWriteStream(
+      `${pdfsToMergeDir}/${pdfNumber}.pdf`
+    );
 
     pdfDoc.pipe(writeStream);
     pdfDoc.end();
@@ -325,14 +367,14 @@ async function createPdf() {
 }
 
 async function mergePdfs() {
-  const outputFiles = fs.readdirSync('export');
+  const pdfsToMerge = fs.readdirSync(pdfsToMergeDir);
 
   setTimeout(() => {
-    for (const pdf of outputFiles) {
-      merger.add(`export/${pdf}`);
-      fs.rmSync(`export/${pdf}`);
+    for (const pdf of pdfsToMerge) {
+      merger.add(`${pdfsToMergeDir}/${pdf}`);
+      fs.rmSync(`${pdfsToMergeDir}/${pdf}`);
     }
 
-    merger.save(`export/photographic-report.pdf`);
+    merger.save(`output/photographic-report.pdf`);
   }, 500);
 }
