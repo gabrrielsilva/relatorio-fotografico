@@ -32,7 +32,7 @@ npm run create
 
 Ele se parece com isso:
 
-![alt text](https://github.com/gabrrielsilva/relatorio-fotografico/blob/main/example.jpeg?raw=true)
+![alt text](https://github.com/gabrrielsilva/relatorio-fotografico/blob/main/example.png?raw=true)
 
 ## Observações
 
