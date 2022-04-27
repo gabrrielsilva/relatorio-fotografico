@@ -6,7 +6,7 @@
 
 ## Como usar
 
-- Coloque um arquivo **kmz** na pasta **input** do diretório principal, este kmz deve ter uma pasta com todos os marcadores renomeados em ordem crescente (1, 2, 3...) e de preferência as duas fotos do poste em cada marcador (se um poste não tiver alguma ou as duas fotos, será usada uma foto padrão Infinitel).
+- Coloque um arquivo **kmz** na pasta **input** do diretório principal, este kmz deve ter uma pasta com todos os marcadores renomeados em ordem crescente (1, 2, 3...) e de preferência as duas fotos do poste em cada marcador (se um poste não tiver uma ou as duas fotos, será usada uma foto padrão Infinitel).
 
 - Abra um terminal, vá até o diretório principal:
 
