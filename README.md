@@ -21,6 +21,9 @@ npm install
 ```
 
 - Altere as informações do projeto abrindo o arquivo **data.ts** que está dentro da pasta **src**, em um editor de texto (isso será alterado futuramente, onde as informações do projeto serão preenchidas através do terminal, uma Command-Line Interface)
+
+- Altere as logos do cabeçalho trocando as imagens dos diretórios: **"src/static/images/left-logo"** e **"src/static/images/right-logo"** (a resolução deve ser de até 500x200px, estou deixando na pasta **"src/static/images/sample"** alguns exemplos que podem ser usados)
+
 - Execute o script:
 
 ```sh
@@ -35,7 +38,7 @@ Ele se parece com isso:
   <img width="600" height="auto" src="https://github.com/gabrrielsilva/relatorio-fotografico/blob/main/example.png?raw=true">
 </p>
 
-**Obs**: se algum erro persistir durante o processamento, verifique se há algum conteúdo em **src/kml-cloud-media**, se sim os remova.
+**Obs**: se algum erro persistir durante o processamento, verifique se há algum conteúdo em **"src/kml-cloud-media"**, se sim os remova.
 
 ## Por baixo dos panos
 

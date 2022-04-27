@@ -26,7 +26,7 @@ export const styles: StyleDictionary = {
     fontSize: 10,
     bold: true,
     color: 'white',
-    fillColor: '#002E46',
+    fillColor: '#1F2937',
   },
 };
 

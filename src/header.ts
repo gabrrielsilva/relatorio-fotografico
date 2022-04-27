@@ -1,5 +1,12 @@
+import fs from 'fs';
 import { data } from './data';
 import './styles';
+
+const leftLogoDir = 'src/static/images/left-logo';
+const rightLogoDir = 'src/static/images/right-logo';
+
+const leftLogo = fs.readdirSync(leftLogoDir);
+const rightLogo = fs.readdirSync(rightLogoDir);
 
 export const header = {
   style: 'header',
@@ -10,10 +17,10 @@ export const header = {
       [
         {
           rowSpan: 4,
-          image: 'src/static/images/tim-logo.png',
-          fit: [75, 75],
+          image: `${leftLogoDir}/${leftLogo[0]}`,
+          fit: [100, 100],
           alignment: 'center',
-          margin: [0, 18],
+          margin: [0, 10],
         },
         {
           rowSpan: 2,
@@ -32,10 +39,10 @@ export const header = {
         },
         {
           rowSpan: 4,
-          image: 'src/static/images/comfica-logo.png',
-          fit: [75, 75],
+          image: `${rightLogoDir}/${rightLogo[0]}`,
+          fit: [100, 100],
           alignment: 'center',
-          margin: [0, 20],
+          margin: [0, 10],
         },
       ],
       [],
