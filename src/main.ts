@@ -343,14 +343,10 @@ function createColumns(
 
     photos.push(leftAndRightColumnWithleftAndRightPhotosInARow);
 
-    console.log('PL', photos.length);
-
     if (photos.length === polesInPdf / 2) {
       polesAmount -= polesInPdf;
       createPdf();
     }
-
-    console.log('PA', polesAmount);
 
     if (
       polesAmount < polesInPdf &&
