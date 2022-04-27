@@ -87,6 +87,9 @@ function checkInputFileExtension(file: string) {
 }
 
 async function extractKmlFileAndMediaFolder(file: string) {
+  fs.mkdirSync(kmlAndCloudMediaDir);
+  fs.mkdirSync(pdfsToMergeDir);
+
   fs.copyFileSync(`${inputFileDir}/${file}`, `${kmlAndCloudMediaDir}/${file}`);
 
   fs.renameSync(
@@ -353,13 +356,6 @@ function createColumns(
       photos.length === Math.ceil(polesAmount / 2)
     ) {
       await createPdf();
-
-      fs.rmSync(`${kmlAndCloudMediaDir}/cloud_media`, {
-        recursive: true,
-        force: true,
-      });
-      fs.rmSync(`${kmlAndCloudMediaDir}/doc.kml`);
-
       mergePdfs();
     }
   });
@@ -396,6 +392,17 @@ async function mergePdfs() {
       fs.rmSync(`${pdfsToMergeDir}/${pdf}`);
     }
 
+    fs.rmSync(kmlAndCloudMediaDir, {
+      recursive: true,
+      force: true,
+    });
+
+    fs.rmSync(pdfsToMergeDir, {
+      recursive: true,
+      force: true,
+    });
+
+    fs.mkdirSync('output');
     merger.save(`output/photographic-report.pdf`);
   }, 500);
 
