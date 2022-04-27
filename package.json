@@ -4,13 +4,14 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "create": "ts-node-dev --respawn --transpile-only src/main.ts"
+    "create": "ts-node-dev --respawn --transpile-only --clear src/main.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@tmcw/togeojson": "^4.7.0",
+    "chalk": "^4.1.2",
     "decompress": "^4.2.1",
     "pdf-merger-js": "^3.4.0",
     "pdfmake": "^0.2.5",

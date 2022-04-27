@@ -1,3 +1,4 @@
+import chalk from 'chalk';
 import decompress from 'decompress';
 import fs from 'fs';
 import PDFMerger from 'pdf-merger-js';
@@ -49,27 +50,23 @@ const inputFileDir = 'input';
 const inputFile = fs.readdirSync(inputFileDir);
 const kmlAndCloudMediaDir = 'src/kml-cloud-media';
 
-// show in terminal
 let polesAmountImmutable = 0;
 let photosAmount = 0;
 let polesWithoutPhoto = 0;
 let ignoredMarkers = 0;
 
+let begin: number;
 (async () => {
+  begin = Date.now();
+
   const file = inputFile[0];
 
   if (file) {
     checkInputFileExtension(file);
   } else {
-    throw new Error('Coloque um arquivo kmz na pasta input');
-    // console.log('Coloque o arquivo kmz na pasta input');
-
-    // const watcher = fs.watch(inputFileDir, (changeType, file) => {
-    //   if (changeType === 'rename') {
-    //     watcher.close();
-    //     checkInputFileExtension(file);
-    //   }
-    // });
+    throw new Error(
+      `${chalk.redBright('Coloque um arquivo kmz na pasta input')}`
+    );
   }
 })();
 
@@ -77,10 +74,13 @@ function checkInputFileExtension(file: string) {
   const extension = file.split('.').pop();
 
   if (extension === 'kmz') {
-    console.log('Kmz detectado...');
+    console.log(`${chalk.yellowBright('Kmz detectado... 🌎')}`);
+    console.log('');
+    console.log(`${chalk.magentaBright('Processando... 🦜')}`);
+
     extractKmlFileAndMediaFolder(file);
   } else {
-    throw new Error('O arquivo de entrada não é um kmz!');
+    throw new Error(`${chalk.redBright('O arquivo de entrada não é um kmz!')}`);
   }
 }
 
@@ -210,7 +210,9 @@ function splitColumnsAndPdf(
   } else if (pole % 2 === 0) {
     polesInRightColumn.push([pole, coordinates, leftPhotoPath, rightPhotoPath]);
   } else {
-    throw new Error('Algum poste está nomeado incorretamente');
+    throw new Error(
+      `${chalk.redBright.bold('Algum poste está nomeado incorretamente')}`
+    );
   }
 
   if (
@@ -218,7 +220,9 @@ function splitColumnsAndPdf(
     polesInRightColumn.length - polesInLeftColumn.length > 1
   ) {
     throw new Error(
-      'Provavelmente a numeração dos postes está incorreta no kmz, verifique e tente novamente!'
+      `${chalk.redBright.bold(
+        'Provavelmente a numeração dos postes está incorreta no kmz, verifique e tente novamente!'
+      )}`
     );
   }
 
@@ -377,4 +381,17 @@ async function mergePdfs() {
 
     merger.save(`output/photographic-report.pdf`);
   }, 500);
+
+  // show info in terminal
+  console.log('');
+  console.log(
+    `${chalk.greenBright(`Relatório gerado`)} ${chalk.gray(
+      `[${(Date.now() - begin) / 1000}s] ✅`
+    )}`
+  );
+  console.log('');
+  console.log(`☦️ Total de postes: ${chalk.cyanBright(polesAmountImmutable)}`);
+  console.log(`📷 Fotos no kmz: ${chalk.cyanBright(photosAmount)}`);
+  console.log(`📂 Postes sem foto: ${chalk.cyanBright(polesWithoutPhoto)}`);
+  console.log(`📌 Marcadores ignorados: ${chalk.cyanBright(ignoredMarkers)}`);
 }
