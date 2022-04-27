@@ -50,6 +50,8 @@ const inputFileDir = 'input';
 const inputFile = fs.readdirSync(inputFileDir);
 const kmlAndCloudMediaDir = 'src/kml-cloud-media';
 
+const noPhotoPath = 'src/static/images/no-photo-infinitel.png';
+
 let polesAmountImmutable = 0;
 let photosAmount = 0;
 let polesWithoutPhoto = 0;
@@ -111,16 +113,22 @@ async function extractKmlFileAndMediaFolder(file: string) {
       }
     });
 
-  const cloudMediaDir = `${kmlAndCloudMediaDir}/cloud_media`;
-  const cloudMediaFiles = fs.readdirSync(cloudMediaDir);
+  const checkMediaFolder = fs.readdirSync(kmlAndCloudMediaDir);
 
-  photosAmount = cloudMediaFiles.length;
+  if (checkMediaFolder.length > 1) {
+    const cloudMediaDir = `${kmlAndCloudMediaDir}/cloud_media`;
+    const cloudMediaFiles = fs.readdirSync(cloudMediaDir);
 
-  for await (const file of cloudMediaFiles) {
-    fs.renameSync(`${cloudMediaDir}/${file}`, `${cloudMediaDir}/${file}.png`);
+    photosAmount = cloudMediaFiles.length;
+
+    for await (const file of cloudMediaFiles) {
+      fs.renameSync(`${cloudMediaDir}/${file}`, `${cloudMediaDir}/${file}.png`);
+    }
+
+    getGeoJsonFromKmlFile();
+  } else {
+    getGeoJsonFromKmlFile();
   }
-
-  getGeoJsonFromKmlFile();
 }
 
 async function getGeoJsonFromKmlFile() {
@@ -169,7 +177,6 @@ function setLeftAndRightPhotos(
   let leftPhotoPath: string = '';
   let rightPhotoPath: string = '';
 
-  const noPhotoPath = 'src/static/images/no-photo-infinitel.png';
   const photosDir = 'src/kml-cloud-media/';
 
   if (leftPhoto && rightPhoto) {
@@ -241,7 +248,15 @@ function createColumns(
   polesInRightColumn: any[][]
 ) {
   polesInLeftColumn.forEach(async (photoTableInLeftColumn, index) => {
-    const photoTableInRightColumn = polesInRightColumn[index];
+    let photoTableInRightColumn = polesInRightColumn[index];
+
+    if (!photoTableInLeftColumn) {
+      photoTableInLeftColumn = [null, [0, 0, 0], noPhotoPath, noPhotoPath];
+    }
+
+    if (!photoTableInRightColumn) {
+      photoTableInRightColumn = [null, [0, 0, 0], noPhotoPath, noPhotoPath];
+    }
 
     let pageBreak;
     if (photos.length % 4 === 0 && photos.length !== 0) {
@@ -328,13 +343,19 @@ function createColumns(
 
     photos.push(leftAndRightColumnWithleftAndRightPhotosInARow);
 
+    console.log('PL', photos.length);
+
     if (photos.length === polesInPdf / 2) {
       polesAmount -= polesInPdf;
       createPdf();
     }
 
-    // last pdf
-    if (polesAmount < polesInPdf && photos.length === polesAmount / 2) {
+    console.log('PA', polesAmount);
+
+    if (
+      polesAmount < polesInPdf &&
+      photos.length === Math.ceil(polesAmount / 2)
+    ) {
       await createPdf();
 
       fs.rmSync(`${kmlAndCloudMediaDir}/cloud_media`, {
