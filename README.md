@@ -20,7 +20,7 @@ cd caminho-do-diretorio/relatorio-fotografico
 npm install
 ```
 
-- Altere as informações do projeto abrindo o arquivo **data.ts** que está dentro da pasta **src**, em um editor de texto (isso será alterado futuramente, onde as informações do projeto serão preenchidas através do terminal, uma Command-Line Interface)
+- Altere as informações do projeto via linha de comando
 
 - Altere as logos do cabeçalho trocando as imagens dos diretórios: **"src/static/images/left-logo"** e **"src/static/images/right-logo"** (a resolução deve ser de até 500x200px, estou deixando na pasta **"src/static/images/sample"** alguns exemplos que podem ser usados)
 

@@ -4,40 +4,35 @@ import fs from 'fs';
 import PDFMerger from 'pdf-merger-js';
 import PdfPrinter from 'pdfmake';
 import { TDocumentDefinitions } from 'pdfmake/interfaces';
-import { header } from './header';
+import readline from 'readline';
 import './styles';
 import { fonts, styles } from './styles';
 import { convertKmlToGeoJson } from './toGeoJson';
 
-export const photos: any[] = [];
+let header: any = {};
+const photos: any[] = [];
 
 const photoWidth = 120;
 const photoHeight = 150;
 const photoGap = 30;
 
-// export type HeaderData = {
-//   tipo: string;
-//   projeto: string;
-//   localidade: string;
-//   idSgiOuGlSgp: string;
-//   data: string;
-//   siteOuAbord: string;
-//   versao: string;
-// };
+const leftLogoDir = 'src/static/images/left-logo';
+const rightLogoDir = 'src/static/images/right-logo';
 
-// const headerData: HeaderData = {} as HeaderData;
+const leftLogo = fs.readdirSync(leftLogoDir);
+const rightLogo = fs.readdirSync(rightLogoDir);
 
-const docDefinition: TDocumentDefinitions = {
-  pageSize: 'A4',
-  pageOrientation: 'portrait',
-  pageMargins: [0, 95, 0, 0],
-
-  header,
-
-  content: [photos],
-
-  styles,
+type HeaderData = {
+  id: string;
+  projeto: string;
+  seguimento: string;
+  local: string;
+  data: string;
+  siteOuAbordagem: string;
+  versao: string;
 };
+
+let headerData: HeaderData = {} as HeaderData;
 
 const printer = new PdfPrinter(fonts);
 const merger = new PDFMerger();
@@ -78,12 +73,134 @@ function checkInputFileExtension(file: string) {
   if (extension === 'kmz') {
     console.log(`${chalk.yellowBright('Kmz detectado... 🌎')}`);
     console.log('');
-    console.log(`${chalk.magentaBright('Processando... 🦜')}`);
 
-    extractKmlFileAndMediaFolder(file);
+    setHeaderData(file);
   } else {
     throw new Error(`${chalk.redBright('O arquivo de entrada não é um kmz!')}`);
   }
+}
+
+function setHeaderData(file: string) {
+  const user = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  headerData.data = new Date().toLocaleDateString('pt-BR');
+
+  user.question(chalk.inverse('Qual o ID do projeto?\n'), (answer) => {
+    headerData.id = answer;
+
+    user.question(chalk.inverse('Qual o título do projeto?\n'), (answer) => {
+      headerData.projeto = answer;
+
+      user.question(
+        chalk.inverse('Qual o seguimento do projeto?\n'),
+        (answer) => {
+          headerData.seguimento = answer;
+
+          user.question(
+            chalk.inverse('Qual o local do projeto?\n'),
+            (answer) => {
+              headerData.local = answer;
+
+              user.question(
+                chalk.inverse('Qual o site/abordagem do projeto?\n'),
+                (answer) => {
+                  headerData.siteOuAbordagem = answer;
+
+                  user.question(
+                    chalk.inverse('Qual a versão do projeto?\n'),
+                    (answer) => {
+                      headerData.versao = answer;
+                      user.close();
+
+                      console.log('');
+                      console.log(
+                        `${chalk.magentaBright('Processando... 🦜')}`
+                      );
+
+                      header = {
+                        style: 'header',
+                        table: {
+                          widths: ['20%', '36%', '12%', '12%', '20%'],
+                          heights: 12,
+                          body: [
+                            [
+                              {
+                                rowSpan: 4,
+                                image: `${leftLogoDir}/${leftLogo[0]}`,
+                                fit: [100, 100],
+                                alignment: 'center',
+                                margin: [0, 10],
+                              },
+                              {
+                                rowSpan: 2,
+                                text: `Relatório fotográfico\n${headerData.seguimento}`,
+                                style: 'titleHeader',
+                              },
+                              {
+                                rowSpan: 2,
+                                text: `ID SGI/GL SGP\n ${headerData.id}`,
+                                style: 'infoHeader',
+                              },
+                              {
+                                rowSpan: 2,
+                                text: `SITE/ABORD\n ${headerData.siteOuAbordagem}`,
+                                style: 'infoHeader',
+                              },
+                              {
+                                rowSpan: 4,
+                                image: `${rightLogoDir}/${rightLogo[0]}`,
+                                fit: [100, 100],
+                                alignment: 'center',
+                                margin: [0, 10],
+                              },
+                            ],
+                            [],
+                            [
+                              '',
+                              {
+                                text: `PROJETO: ${headerData.projeto}`,
+                                style: 'infoHeader',
+                              },
+                              {
+                                rowSpan: 2,
+                                text: `DATA\n ${headerData.data}`,
+                                style: 'infoHeader',
+                              },
+                              {
+                                rowSpan: 2,
+                                text: `VERSÃO\n ${headerData.versao}`,
+                                style: 'infoHeader',
+                              },
+                              '',
+                            ],
+                            [
+                              '',
+                              {
+                                text: `LOCALIDADE: ${headerData.local}`,
+                                style: 'infoHeader',
+                              },
+                              '',
+                              '',
+                              '',
+                            ],
+                          ],
+                        },
+                      };
+
+                      extractKmlFileAndMediaFolder(file);
+                    }
+                  );
+                }
+              );
+            }
+          );
+        }
+      );
+    });
+  });
 }
 
 async function extractKmlFileAndMediaFolder(file: string) {
@@ -367,6 +484,18 @@ async function createPdf() {
   return new Promise((resolve) => {
     pdfNumber++;
 
+    const docDefinition: TDocumentDefinitions = {
+      pageSize: 'A4',
+      pageOrientation: 'portrait',
+      pageMargins: [0, 95, 0, 0],
+
+      header,
+
+      content: [photos],
+
+      styles,
+    };
+
     const pdfDoc = printer.createPdfKitDocument(docDefinition);
     const writeStream = fs.createWriteStream(
       `${pdfsToMergeDir}/${pdfNumber}.pdf`
@@ -402,7 +531,6 @@ async function mergePdfs() {
       force: true,
     });
 
-    fs.mkdirSync('output');
     merger.save(`output/photographic-report.pdf`);
   }, 500);
 
