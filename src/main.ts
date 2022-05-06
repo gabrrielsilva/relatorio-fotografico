@@ -255,38 +255,79 @@ async function getGeoJsonFromKmlFile() {
   const geoJson = await convertKmlToGeoJson(`${kmlAndCloudMediaDir}/doc.kml`);
 
   await geoJson.features.filter((marker: any) => {
-    if (Number(marker.properties.name)) polesAmount++;
+    const poleIdentifier = JSON.stringify(marker.properties.name);
+    if (poleIdentifier) {
+      const pole = poleIdentifier.replace(/"/g, '').replace(/([^\d])+/gim, '');
+
+      if (Number(pole)) polesAmount++;
+    }
   });
 
   polesAmountImmutable = polesAmount;
 
   geoJson.features.forEach((marker: any) => {
-    const pole = marker.properties.name as string;
-    const photos = marker.properties.com_exlyo_mapmarker_images_with_ext as
-      | string
-      | undefined;
-    const coordinates = marker.geometry.coordinates as Array<number>;
+    // const pole = marker.properties.name as string;
+    const poleIdentifier = JSON.stringify(marker.properties.name);
+    if (poleIdentifier) {
+      const pole = poleIdentifier.replace(/"/g, '').replace(/([^\d])+/gim, '');
 
-    let leftPhoto;
-    let rightPhoto;
+      const photos = marker.properties.com_exlyo_mapmarker_images_with_ext as
+        | string
+        | undefined;
+      const coordinates = marker.geometry.coordinates as Array<number>;
 
-    if (photos !== undefined) {
-      const photosObj = JSON.parse(photos as string);
-      leftPhoto = photosObj[0];
-      rightPhoto = photosObj[1];
-    } else {
-      leftPhoto = undefined;
-      rightPhoto = undefined;
-    }
+      let leftPhoto;
+      let rightPhoto;
 
-    if (pole && Number(pole)) {
-      setLeftAndRightPhotos(Number(pole), coordinates, leftPhoto, rightPhoto);
-    } else {
-      ignoredMarkers++;
-      // console.log(`Marcador nomeado "${pole}" foi ignorado`);
+      if (photos !== undefined) {
+        const photosObj = JSON.parse(photos as string);
+        leftPhoto = photosObj[0];
+        rightPhoto = photosObj[1];
+      } else {
+        leftPhoto = undefined;
+        rightPhoto = undefined;
+      }
+
+      if (pole && Number(pole)) {
+        // sortAscendingMarkers(Number(pole), coordinates, leftPhoto, rightPhoto);
+        setLeftAndRightPhotos(Number(pole), coordinates, leftPhoto, rightPhoto);
+      } else {
+        ignoredMarkers++;
+        // console.log(`Marcador nomeado "${pole}" foi ignorado`);
+      }
     }
   });
 }
+
+// let allMarkers: any[] = [];
+// function sortAscendingMarkers(
+//   pole: number,
+//   coordinates: number[],
+//   leftPhoto: any,
+//   rightPhoto: any
+// ) {
+//   allMarkers.push({
+//     pole,
+//     coordinates,
+//     leftPhoto,
+//     rightPhoto,
+//   });
+
+//   if (allMarkers.length === polesAmountImmutable) {
+//     const sortedMarkers = allMarkers.sort((a, b) => a.pole - b.pole);
+//     // console.log(sortedMarkers);
+
+//     fs.rmSync(kmlAndCloudMediaDir, {
+//       recursive: true,
+//       force: true,
+//     });
+
+//     fs.rmSync(pdfsToMergeDir, {
+//       recursive: true,
+//       force: true,
+//     });
+//   }
+// }
 
 function setLeftAndRightPhotos(
   pole: number,
