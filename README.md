@@ -38,8 +38,6 @@ Ele se parece com isso:
   <img width="600" height="auto" src="https://github.com/gabrrielsilva/relatorio-fotografico/blob/main/example.png?raw=true">
 </p>
 
-**Obs**: se algum erro persistir durante o processamento, verifique se há algum conteúdo em **"src/kml-cloud-media"**, se sim os remova.
-
 ## Por baixo dos panos
 
 Através do arquivo kmz é extraído um arquivo kml e uma pasta, com todas as fotos dos postes que estão nos marcadores. Após a extração, o arquivo kml é convertido para geojson, uma notação onde estão todos os dados geográficos e a lista de marcadores, cada um com nome, coordenadas e o caminho para o diretório das fotos.
