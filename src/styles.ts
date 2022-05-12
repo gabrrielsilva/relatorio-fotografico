@@ -1,5 +1,14 @@
 import { StyleDictionary } from 'pdfmake/interfaces';
 
+export const fonts = {
+  Roboto: {
+    normal: 'src/static/fonts/Roboto-Regular.ttf',
+    bold: 'src/static/fonts/Roboto-Medium.ttf',
+    italics: 'src/static/fonts/Roboto-Italic.ttf',
+    bolditalics: 'src/static/fonts/Roboto-MediumItalic.ttf',
+  },
+};
+
 export const styles: StyleDictionary = {
   header: {
     margin: [0, 0, 0, 0],
@@ -27,14 +36,5 @@ export const styles: StyleDictionary = {
     bold: true,
     color: 'white',
     fillColor: '#1F2937',
-  },
-};
-
-export const fonts = {
-  Roboto: {
-    normal: 'src/static/fonts/Roboto-Regular.ttf',
-    bold: 'src/static/fonts/Roboto-Medium.ttf',
-    italics: 'src/static/fonts/Roboto-Italic.ttf',
-    bolditalics: 'src/static/fonts/Roboto-MediumItalic.ttf',
   },
 };

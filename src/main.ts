@@ -2,332 +2,177 @@ import chalk from 'chalk';
 import decompress from 'decompress';
 import fs from 'fs';
 import PDFMerger from 'pdf-merger-js';
-import PdfPrinter from 'pdfmake';
-import { TDocumentDefinitions } from 'pdfmake/interfaces';
-import readline from 'readline';
+import { createPDF } from './create';
+import { setHeader, startTime } from './header';
 import './styles';
-import { fonts, styles } from './styles';
 import { convertKmlToGeoJson } from './toGeoJson';
 
-let header: any = {};
-const photos: any[] = [];
+export const photos: any[] = [];
 
-const photoWidth = 120;
-const photoHeight = 150;
-const photoGap = 30;
+const processId = process.pid;
 
-const leftLogoDir = 'src/static/images/left-logo';
-const rightLogoDir = 'src/static/images/right-logo';
+const photoWidth = 120,
+      photoHeight = 150,
+      photoGap = 30,
+      imagesDir = `src/static/images`,
+      noPhotoPath = `${imagesDir}/no-photo-infinitel.png`;
 
-const leftLogo = fs.readdirSync(leftLogoDir);
-const rightLogo = fs.readdirSync(rightLogoDir);
+const inputFileDir = `input`,
+      inputFile = fs.readdirSync(inputFileDir),
+      kmlCloudMediaDir = `src/kml-cloud-media`,
+      pdfsToMergeDir = `src/pdfs-to-merge`;
 
-type HeaderData = {
-  id: string;
-  projeto: string;
-  seguimento: string;
-  local: string;
-  data: string;
-  siteOuAbordagem: string;
-  versao: string;
-};
+let   POLES_IN_PDF = 96,
+      polesAmount = 0,
+      polesAmountImmutable = 0,
+      polesWithoutPhoto = 0,
+      photosAmount = 0,
+      ignoredMarkers = 0;
 
-let headerData: HeaderData = {} as HeaderData;
-
-const printer = new PdfPrinter(fonts);
 const merger = new PDFMerger();
-const pdfsToMergeDir = 'src/pdfs-to-merge';
 
-let polesInPdf = 96;
-let polesAmount = 0;
+(async() => {
+  console.log(chalk.blueBright(`Process PID: ${processId}\n`));
 
-const inputFileDir = 'input';
-const inputFile = fs.readdirSync(inputFileDir);
-const kmlAndCloudMediaDir = 'src/kml-cloud-media';
+  const filename = inputFile[0];
 
-const noPhotoPath = 'src/static/images/no-photo-infinitel.png';
+  if (filename) checkInputFileExtension(filename)
+  else throw new Error(chalk.redBright(`Coloque um arquivo KMZ na pasta input`))
+})()
 
-let polesAmountImmutable = 0;
-let photosAmount = 0;
-let polesWithoutPhoto = 0;
-let ignoredMarkers = 0;
-
-let begin: number;
-(async () => {
-  begin = Date.now();
-
-  const file = inputFile[0];
-
-  if (file) {
-    checkInputFileExtension(file);
-  } else {
-    throw new Error(
-      `${chalk.redBright('Coloque um arquivo kmz na pasta input')}`
-    );
-  }
-})();
-
-function checkInputFileExtension(file: string) {
-  const extension = file.split('.').pop();
+async function checkInputFileExtension(filename: string) {
+  const extension = filename.split(`.`).pop();
 
   if (extension === 'kmz') {
-    console.log(`${chalk.yellowBright('Kmz detectado... 🌎')}`);
+    console.log(chalk.yellow(`KMZ Detectado...`));
     console.log('');
+    
+    await setHeader();
 
-    setHeaderData(file);
+    extractKmlFileAndMediaFolder(filename);
   } else {
-    throw new Error(`${chalk.redBright('O arquivo de entrada não é um kmz!')}`);
+    throw new Error(chalk.redBright(`O arquivo de entrada não é um KMZ`))
   }
 }
 
-function setHeaderData(file: string) {
-  const user = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
+async function extractKmlFileAndMediaFolder(filename: string) {
+  if (fs.existsSync(kmlCloudMediaDir)) {
+    fs.rmSync(kmlCloudMediaDir, { recursive: true, force: true });
+  }
 
-  headerData.data = new Date().toLocaleDateString('pt-BR');
+  if (fs.existsSync(pdfsToMergeDir)) {
+    fs.rmSync(pdfsToMergeDir, { recursive: true, force: true });
+  }
 
-  user.question(chalk.inverse('Qual o ID do projeto?\n'), (answer) => {
-    headerData.id = answer;
-
-    user.question(chalk.inverse('Qual o título do projeto?\n'), (answer) => {
-      headerData.projeto = answer;
-
-      user.question(
-        chalk.inverse('Qual o seguimento do projeto?\n'),
-        (answer) => {
-          headerData.seguimento = answer;
-
-          user.question(
-            chalk.inverse('Qual o local do projeto?\n'),
-            (answer) => {
-              headerData.local = answer;
-
-              user.question(
-                chalk.inverse('Qual o site/abordagem do projeto?\n'),
-                (answer) => {
-                  headerData.siteOuAbordagem = answer;
-
-                  user.question(
-                    chalk.inverse('Qual a versão do projeto?\n'),
-                    (answer) => {
-                      headerData.versao = answer;
-                      user.close();
-
-                      console.log('');
-                      console.log(
-                        `${chalk.magentaBright('Processando... 🦜')}`
-                      );
-
-                      header = {
-                        style: 'header',
-                        table: {
-                          widths: ['20%', '36%', '12%', '12%', '20%'],
-                          heights: 12,
-                          body: [
-                            [
-                              {
-                                rowSpan: 4,
-                                image: `${leftLogoDir}/${leftLogo[0]}`,
-                                fit: [100, 100],
-                                alignment: 'center',
-                                margin: [0, 10],
-                              },
-                              {
-                                rowSpan: 2,
-                                text: `Relatório fotográfico\n${headerData.seguimento}`,
-                                style: 'titleHeader',
-                              },
-                              {
-                                rowSpan: 2,
-                                text: `ID SGI/GL SGP\n ${headerData.id}`,
-                                style: 'infoHeader',
-                              },
-                              {
-                                rowSpan: 2,
-                                text: `SITE/ABORD\n ${headerData.siteOuAbordagem}`,
-                                style: 'infoHeader',
-                              },
-                              {
-                                rowSpan: 4,
-                                image: `${rightLogoDir}/${rightLogo[0]}`,
-                                fit: [100, 100],
-                                alignment: 'center',
-                                margin: [0, 10],
-                              },
-                            ],
-                            [],
-                            [
-                              '',
-                              {
-                                text: `PROJETO: ${headerData.projeto}`,
-                                style: 'infoHeader',
-                              },
-                              {
-                                rowSpan: 2,
-                                text: `DATA\n ${headerData.data}`,
-                                style: 'infoHeader',
-                              },
-                              {
-                                rowSpan: 2,
-                                text: `VERSÃO\n ${headerData.versao}`,
-                                style: 'infoHeader',
-                              },
-                              '',
-                            ],
-                            [
-                              '',
-                              {
-                                text: `LOCALIDADE: ${headerData.local}`,
-                                style: 'infoHeader',
-                              },
-                              '',
-                              '',
-                              '',
-                            ],
-                          ],
-                        },
-                      };
-
-                      extractKmlFileAndMediaFolder(file);
-                    }
-                  );
-                }
-              );
-            }
-          );
-        }
-      );
-    });
-  });
-}
-
-async function extractKmlFileAndMediaFolder(file: string) {
-  fs.mkdirSync(kmlAndCloudMediaDir);
+  fs.mkdirSync(kmlCloudMediaDir);
   fs.mkdirSync(pdfsToMergeDir);
 
-  fs.copyFileSync(`${inputFileDir}/${file}`, `${kmlAndCloudMediaDir}/${file}`);
+  fs.copyFileSync(
+    `${inputFileDir}/${filename}`,
+    `${kmlCloudMediaDir}/${filename}`
+  );
 
   fs.renameSync(
-    `${kmlAndCloudMediaDir}/${file}`,
-    `${kmlAndCloudMediaDir}/${file}.zip`
-  );
+    `${kmlCloudMediaDir}/${filename}`,
+    `${kmlCloudMediaDir}/${filename}.zip`
+  )
 
-  // decompress to get the kml file and media folder
   await decompress(
-    `${kmlAndCloudMediaDir}/${file}.zip`,
-    `${kmlAndCloudMediaDir}`
-  );
+    `${kmlCloudMediaDir}/${filename}.zip`,
+    kmlCloudMediaDir
+  )
 
-  fs.rmSync(`${kmlAndCloudMediaDir}/${file}.zip`);
-
-  fs.readdirSync(kmlAndCloudMediaDir, { withFileTypes: true })
-    .filter((dirent) => dirent.isDirectory())
-    .map((dirent) => {
+  fs.rmSync(`${kmlCloudMediaDir}/${filename}.zip`);
+  fs.readdirSync(kmlCloudMediaDir, { withFileTypes: true })
+    .filter(dirent => dirent.isDirectory())
+    .map(dirent => {
       if (dirent.name !== 'cloud_media') {
         fs.renameSync(
-          `${kmlAndCloudMediaDir}/${dirent.name}`,
-          `${kmlAndCloudMediaDir}/cloud_media`
-        );
+          `${kmlCloudMediaDir}/${dirent.name}`,
+          `${kmlCloudMediaDir}/cloud_media`
+        )
       }
-    });
+    })
 
-  const checkMediaFolder = fs.readdirSync(kmlAndCloudMediaDir);
-
-  if (checkMediaFolder.length > 1) {
-    const cloudMediaDir = `${kmlAndCloudMediaDir}/cloud_media`;
-    const cloudMediaFiles = fs.readdirSync(cloudMediaDir);
+  const itemsInFolder = fs.readdirSync(kmlCloudMediaDir);
+    
+  // check if doc.kml and cloud_media exist
+  if (itemsInFolder.length > 1) {
+    const cloudMediaDir = `${kmlCloudMediaDir}/cloud_media`,
+          cloudMediaFiles = fs.readdirSync(cloudMediaDir);
 
     photosAmount = cloudMediaFiles.length;
 
     for await (const file of cloudMediaFiles) {
-      fs.renameSync(`${cloudMediaDir}/${file}`, `${cloudMediaDir}/${file}.png`);
+      fs.renameSync(
+        `${cloudMediaDir}/${file}`,
+        `${cloudMediaDir}/${file}.png`
+      )
     }
 
-    getGeoJsonFromKmlFile();
+    getGeoJsonFromKml();
   } else {
-    getGeoJsonFromKmlFile();
+    throw new Error('Erro de extração do KMZ');
   }
 }
 
-async function getGeoJsonFromKmlFile() {
-  const geoJson = await convertKmlToGeoJson(`${kmlAndCloudMediaDir}/doc.kml`);
+async function getGeoJsonFromKml() {
+  const GEOJSON = await convertKmlToGeoJson(`${kmlCloudMediaDir}/doc.kml`)
 
-  await geoJson.features.filter((marker: any) => {
-    const poleIdentifier = JSON.stringify(marker.properties.name);
-    if (poleIdentifier) {
-      const pole = poleIdentifier.replace(/"/g, '').replace(/([^\d])+/gim, '');
+  // console.log(GEOJSON);
+  
+  await GEOJSON.features.forEach((marker: any) => {
+    const poleName = JSON.stringify(marker.properties.name);
 
-      if (Number(pole)) polesAmount++;
-    }
-  });
+    if (poleName) {
+      const pole = poleName.replace(/"/g, '').replace(/​/g, '');
 
-  polesAmountImmutable = polesAmount;
-
-  geoJson.features.forEach((marker: any) => {
-    // const pole = marker.properties.name as string;
-    const poleIdentifier = JSON.stringify(marker.properties.name);
-    if (poleIdentifier) {
-      const pole = poleIdentifier.replace(/"/g, '').replace(/([^\d])+/gim, '');
-
-      const photos = marker.properties.com_exlyo_mapmarker_images_with_ext as
-        | string
-        | undefined;
-      const coordinates = marker.geometry.coordinates as Array<number>;
-
-      let leftPhoto;
-      let rightPhoto;
-
-      if (photos !== undefined) {
-        const photosObj = JSON.parse(photos as string);
-        leftPhoto = photosObj[0];
-        rightPhoto = photosObj[1];
-      } else {
-        leftPhoto = undefined;
-        rightPhoto = undefined;
+      if (pole.includes('.')) {
+        console.log(chalk.bgYellow.black(`O marcador ${pole} foi ignorado pois ainda não há suporte a casas decimais`));
       }
 
-      if (pole && Number(pole)) {
-        // sortAscendingMarkers(Number(pole), coordinates, leftPhoto, rightPhoto);
-        setLeftAndRightPhotos(Number(pole), coordinates, leftPhoto, rightPhoto);
+      if (Number(pole) && !pole.includes('.')) polesAmount++;
+    }
+
+    polesAmountImmutable = polesAmount;
+  })
+
+  for (let index = 0; index <= polesAmountImmutable; index++) {
+    GEOJSON.features.filter((marker: any) => {
+      if (marker.properties.name) {
+        const poleName = JSON.stringify(marker.properties.name);
+        const pole = parseFloat(poleName.replace(/"/g, '').replace(/​/g, '')),
+              photos = marker.properties.com_exlyo_mapmarker_images_with_ext as
+              | string
+              | undefined,
+              coordinates = marker.geometry.coordinates as Array<number>;
+
+        let   leftPhoto,
+              rightPhoto;
+
+        if (photos) {
+          const photosObject = JSON.parse(photos as string);
+          leftPhoto = photosObject[0];
+          rightPhoto = photosObject[1];
+        } else {
+          leftPhoto = undefined;
+          rightPhoto = undefined;
+        }
+        
+        if (!pole.toString().includes('.') && pole === index) { 
+          setLeftAndRightPhotos(
+            pole,
+            coordinates,
+            leftPhoto,
+            rightPhoto
+          );
+        }
       } else {
         ignoredMarkers++;
-        // console.log(`Marcador nomeado "${pole}" foi ignorado`);
       }
-    }
-  });
+    })
+  }
 }
-
-// let allMarkers: any[] = [];
-// function sortAscendingMarkers(
-//   pole: number,
-//   coordinates: number[],
-//   leftPhoto: any,
-//   rightPhoto: any
-// ) {
-//   allMarkers.push({
-//     pole,
-//     coordinates,
-//     leftPhoto,
-//     rightPhoto,
-//   });
-
-//   if (allMarkers.length === polesAmountImmutable) {
-//     const sortedMarkers = allMarkers.sort((a, b) => a.pole - b.pole);
-//     // console.log(sortedMarkers);
-
-//     fs.rmSync(kmlAndCloudMediaDir, {
-//       recursive: true,
-//       force: true,
-//     });
-
-//     fs.rmSync(pdfsToMergeDir, {
-//       recursive: true,
-//       force: true,
-//     });
-//   }
-// }
 
 function setLeftAndRightPhotos(
   pole: number,
@@ -335,10 +180,10 @@ function setLeftAndRightPhotos(
   leftPhoto: any,
   rightPhoto: any
 ) {
-  let leftPhotoPath: string = '';
-  let rightPhotoPath: string = '';
-
   const photosDir = 'src/kml-cloud-media/';
+
+  let leftPhotoPath = '',
+      rightPhotoPath = '';
 
   if (leftPhoto && rightPhoto) {
     leftPhotoPath = `${photosDir}${leftPhoto.file_rel_path}${leftPhoto.file_extension}`;
@@ -361,13 +206,13 @@ function setLeftAndRightPhotos(
     rightPhotoPath = noPhotoPath;
   }
 
-  splitColumnsAndPdf(pole, coordinates, leftPhotoPath, rightPhotoPath);
+  splitColumns(pole, coordinates, leftPhotoPath, rightPhotoPath);
 }
 
-let polesInLeftColumn: any[][] = [];
-let polesInRightColumn: any[][] = [];
+export let polesInLeftColumn: any[][] = [],
+           polesInRightColumn: any[][] = [];
 
-function splitColumnsAndPdf(
+function splitColumns(
   pole: number,
   coordinates: number[],
   leftPhotoPath: string,
@@ -378,53 +223,37 @@ function splitColumnsAndPdf(
   } else if (pole % 2 === 0) {
     polesInRightColumn.push([pole, coordinates, leftPhotoPath, rightPhotoPath]);
   } else {
-    throw new Error(
-      `${chalk.redBright.bold('Algum poste está nomeado incorretamente')}`
-    );
+    throw new Error(chalk.redBright('Algum poste está nomeado incorretamente'));
   }
 
   if (
     polesInLeftColumn.length - polesInRightColumn.length > 1 ||
     polesInRightColumn.length - polesInLeftColumn.length > 1
   ) {
-    throw new Error(
-      `${chalk.redBright.bold(
-        'Provavelmente a numeração dos postes está incorreta no kmz, verifique e tente novamente!'
-      )}`
-    );
+    throw new Error(chalk.redBright('Há algum marcador intruso ou faltando!'));
   }
 
-  const polesInMemory = polesInLeftColumn.length + polesInRightColumn.length;
-
+  const POLES_IN_MEMORY = polesInLeftColumn.length + polesInRightColumn.length;
+  
   if (
-    polesInMemory === polesInPdf ||
-    (polesAmount < polesInPdf && polesInMemory === polesAmount)
+    POLES_IN_MEMORY === POLES_IN_PDF ||
+    (polesAmount < POLES_IN_PDF && POLES_IN_MEMORY === polesAmount)
   ) {
     createColumns(polesInLeftColumn, polesInRightColumn);
   }
 }
 
-function createColumns(
-  polesInLeftColumn: any[][],
-  polesInRightColumn: any[][]
-) {
-  polesInLeftColumn.forEach(async (photoTableInLeftColumn, index) => {
-    let photoTableInRightColumn = polesInRightColumn[index];
+async function createColumns(polesInLeftColumn: any[][], polesInRightColumn: any[][]) {
+  polesInLeftColumn.forEach(async (tableLeft, i) => {
+    let tableRight = polesInRightColumn[i];
 
-    if (!photoTableInLeftColumn) {
-      photoTableInLeftColumn = [null, [0, 0, 0], noPhotoPath, noPhotoPath];
-    }
-
-    if (!photoTableInRightColumn) {
-      photoTableInRightColumn = [null, [0, 0, 0], noPhotoPath, noPhotoPath];
-    }
+    if (!tableLeft) { tableLeft = [null, [0, 0, 0], noPhotoPath, noPhotoPath] };
+    if (!tableRight) { tableRight = [null, [0, 0, 0], noPhotoPath, noPhotoPath] };
 
     let pageBreak;
-    if (photos.length % 4 === 0 && photos.length !== 0) {
-      pageBreak = 'before';
-    }
+    if (photos.length % 4 === 0 && photos.length !== 0) pageBreak = 'before';
 
-    const leftAndRightColumnWithleftAndRightPhotosInARow = {
+    const leftAndRightColumnWithTablesAndPhotos = {
       style: 'columns',
       columns: [
         {
@@ -438,23 +267,23 @@ function createColumns(
                   style: 'titlePhotoTable',
                   colSpan: 2,
                   text: `Poste ${parseInt(
-                    photoTableInLeftColumn[0]
+                    tableLeft[0]
                   )} | Lat. ${parseFloat(
-                    photoTableInLeftColumn[1][1].toFixed(4)
+                    tableLeft[1][1].toFixed(4)
                   )} Lon. ${parseFloat(
-                    photoTableInLeftColumn[1][0].toFixed(4)
+                    tableLeft[1][0].toFixed(4)
                   )}`,
                 },
                 '',
               ],
               [
                 {
-                  image: photoTableInLeftColumn[2],
+                  image: tableLeft[2],
                   width: photoWidth,
                   height: photoHeight,
                 },
                 {
-                  image: photoTableInLeftColumn[3],
+                  image: tableLeft[3],
                   width: photoWidth,
                   height: photoHeight,
                 },
@@ -473,23 +302,23 @@ function createColumns(
                   style: 'titlePhotoTable',
                   colSpan: 2,
                   text: `Poste ${parseInt(
-                    photoTableInRightColumn[0]
+                    tableRight[0]
                   )} | Lat. ${parseFloat(
-                    photoTableInRightColumn[1][1].toFixed(4)
+                    tableRight[1][1].toFixed(4)
                   )} Lon. ${parseFloat(
-                    photoTableInRightColumn[1][0].toFixed(4)
+                    tableRight[1][0].toFixed(4)
                   )}`,
                 },
                 '',
               ],
               [
                 {
-                  image: photoTableInRightColumn[2],
+                  image: tableRight[2],
                   width: photoWidth,
                   height: photoHeight,
                 },
                 {
-                  image: photoTableInRightColumn[3],
+                  image: tableRight[3],
                   width: photoWidth,
                   height: photoHeight,
                 },
@@ -502,89 +331,42 @@ function createColumns(
       pageBreak,
     };
 
-    photos.push(leftAndRightColumnWithleftAndRightPhotosInARow);
-
-    if (photos.length === polesInPdf / 2) {
-      polesAmount -= polesInPdf;
-      createPdf();
+    photos.push(leftAndRightColumnWithTablesAndPhotos);
+    
+    if (photos.length === POLES_IN_PDF / 2) {
+      polesAmount = polesAmount - POLES_IN_PDF;
+      
+      await createPDF();
     }
-
+    
+    // last pdf
     if (
-      polesAmount < polesInPdf &&
+      polesAmount < POLES_IN_PDF &&
       photos.length === Math.ceil(polesAmount / 2)
     ) {
-      await createPdf();
-      mergePdfs();
+      createPDF();
+      setTimeout(() => {
+        mergePDFS();
+      }, 500)
     }
-  });
+  })
 }
 
-let pdfNumber = 0;
+function mergePDFS() {
+  const pdfs = fs.readdirSync(pdfsToMergeDir);
 
-async function createPdf() {
-  return new Promise((resolve) => {
-    pdfNumber++;
+  for (const pdf of pdfs) {
+    merger.add(`${pdfsToMergeDir}/${pdf}`);
+    fs.rmSync(`${pdfsToMergeDir}/${pdf}`);
+  }
 
-    const docDefinition: TDocumentDefinitions = {
-      pageSize: 'A4',
-      pageOrientation: 'portrait',
-      pageMargins: [0, 95, 0, 0],
+  merger.save(`output/relatorio.pdf`);
 
-      header,
-
-      content: [photos],
-
-      styles,
-    };
-
-    const pdfDoc = printer.createPdfKitDocument(docDefinition);
-    const writeStream = fs.createWriteStream(
-      `${pdfsToMergeDir}/${pdfNumber}.pdf`
-    );
-
-    pdfDoc.pipe(writeStream);
-    pdfDoc.end();
-
-    photos.length = 0;
-    polesInLeftColumn.length = 0;
-    polesInRightColumn.length = 0;
-
-    pdfDoc.on('end', resolve);
-  });
-}
-
-async function mergePdfs() {
-  const pdfsToMerge = fs.readdirSync(pdfsToMergeDir);
-
-  setTimeout(() => {
-    for (const pdf of pdfsToMerge) {
-      merger.add(`${pdfsToMergeDir}/${pdf}`);
-      fs.rmSync(`${pdfsToMergeDir}/${pdf}`);
-    }
-
-    fs.rmSync(kmlAndCloudMediaDir, {
-      recursive: true,
-      force: true,
-    });
-
-    fs.rmSync(pdfsToMergeDir, {
-      recursive: true,
-      force: true,
-    });
-
-    merger.save(`output/photographic-report.pdf`);
-  }, 500);
-
-  // show info in terminal
   console.log('');
-  console.log(
-    `${chalk.greenBright(`Relatório gerado`)} ${chalk.gray(
-      `[${(Date.now() - begin) / 1000}s] ✅`
-    )}`
-  );
+  console.log(`${chalk.greenBright(`RELATÓRIO GERADO`)} ${chalk.gray(`[${(Date.now() - startTime) / 1000}s]`)}`);
   console.log('');
-  console.log(`☦️ Total de postes: ${chalk.cyanBright(polesAmountImmutable)}`);
-  console.log(`📷 Fotos no kmz: ${chalk.cyanBright(photosAmount)}`);
-  console.log(`📂 Postes sem foto: ${chalk.cyanBright(polesWithoutPhoto)}`);
-  console.log(`📌 Marcadores ignorados: ${chalk.cyanBright(ignoredMarkers)}`);
+  console.log(`Total de postes: ${chalk.rgb(255, 110, 0)(polesAmountImmutable)}`);
+  console.log(`Fotos no kmz: ${chalk.rgb(255, 110, 0)(photosAmount)}`);
+  console.log(`Postes sem foto: ${chalk.rgb(255, 110, 0)(polesWithoutPhoto)}`);
+  // console.log(`Marcadores ignorados: ${chalk.rgb(255, 110, 0)(Math.floor(ignoredMarkers / POLES_IN_PDF))}`);
 }
