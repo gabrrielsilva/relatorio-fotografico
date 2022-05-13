@@ -47,6 +47,7 @@ export async function setHeader() {
   await createQuestion('site/abordagem'),
   await createQuestion('versao')
 
+  console.log('');
   console.log(chalk.magentaBright('Processando...\n'));
 
   startTime = Date.now();

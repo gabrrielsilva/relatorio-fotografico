@@ -7,9 +7,8 @@ import { setHeader, startTime } from './header';
 import './styles';
 import { convertKmlToGeoJson } from './toGeoJson';
 
-export const photos: any[] = [];
-
-const processId = process.pid;
+export const photos: any[] = [],
+             subs: any[] = [];
 
 const photoWidth = 120,
       photoHeight = 150,
@@ -19,21 +18,24 @@ const photoWidth = 120,
 
 const inputFileDir = `input`,
       inputFile = fs.readdirSync(inputFileDir),
-      kmlCloudMediaDir = `src/kml-cloud-media`,
+      kmlMediaDir = `src/kml-cloud-media`,
       pdfsToMergeDir = `src/pdfs-to-merge`;
 
-let   POLES_IN_PDF = 96,
+let   GEOJSON: any,
+      POLES_IN_PDF = 96,
       polesAmount = 0,
       polesAmountImmutable = 0,
       polesWithoutPhoto = 0,
       photosAmount = 0,
-      ignoredMarkers = 0;
+      subsMarkerAmount = 0,
+      subsAmount = 0,
+      subsAmountImmutable = 0,
+      ignoredMarkers = 0,
+      renamedMediaFolder = false;
 
 const merger = new PDFMerger();
 
 (async() => {
-  console.log(chalk.blueBright(`Process PID: ${processId}\n`));
-
   const filename = inputFile[0];
 
   if (filename) checkInputFileExtension(filename)
@@ -44,7 +46,7 @@ async function checkInputFileExtension(filename: string) {
   const extension = filename.split(`.`).pop();
 
   if (extension === 'kmz') {
-    console.log(chalk.yellow(`KMZ Detectado...`));
+    console.log(chalk.blueBright(`KMZ Detectado...`));
     console.log('');
     
     await setHeader();
@@ -56,102 +58,108 @@ async function checkInputFileExtension(filename: string) {
 }
 
 async function extractKmlFileAndMediaFolder(filename: string) {
-  if (fs.existsSync(kmlCloudMediaDir)) {
-    fs.rmSync(kmlCloudMediaDir, { recursive: true, force: true });
+  if (fs.existsSync(kmlMediaDir)) {
+    fs.rmSync(kmlMediaDir, { recursive: true, force: true });
   }
 
   if (fs.existsSync(pdfsToMergeDir)) {
     fs.rmSync(pdfsToMergeDir, { recursive: true, force: true });
   }
 
-  fs.mkdirSync(kmlCloudMediaDir);
+  fs.mkdirSync(kmlMediaDir);
   fs.mkdirSync(pdfsToMergeDir);
 
   fs.copyFileSync(
     `${inputFileDir}/${filename}`,
-    `${kmlCloudMediaDir}/${filename}`
+    `${kmlMediaDir}/${filename}`
   );
 
   fs.renameSync(
-    `${kmlCloudMediaDir}/${filename}`,
-    `${kmlCloudMediaDir}/${filename}.zip`
+    `${kmlMediaDir}/${filename}`,
+    `${kmlMediaDir}/${filename}.zip`
   )
 
   await decompress(
-    `${kmlCloudMediaDir}/${filename}.zip`,
-    kmlCloudMediaDir
+    `${kmlMediaDir}/${filename}.zip`,
+    kmlMediaDir
   )
 
-  fs.rmSync(`${kmlCloudMediaDir}/${filename}.zip`);
-  fs.readdirSync(kmlCloudMediaDir, { withFileTypes: true })
+  fs.rmSync(`${kmlMediaDir}/${filename}.zip`);
+
+  fs.readdirSync(kmlMediaDir, { withFileTypes: true })
     .filter(dirent => dirent.isDirectory())
-    .map(dirent => {
-      if (dirent.name !== 'cloud_media') {
-        fs.renameSync(
-          `${kmlCloudMediaDir}/${dirent.name}`,
-          `${kmlCloudMediaDir}/cloud_media`
-        )
+    .map(async dirent => {
+      const itemsInFolder = fs.readdirSync(kmlMediaDir);
+        
+      if (itemsInFolder.length > 1) {
+        const cloudMediaDir = `${kmlMediaDir}/${dirent.name}`,
+              cloudMediaFiles = fs.readdirSync(cloudMediaDir);
+    
+        photosAmount = cloudMediaFiles.length;
+    
+        for await (const file of cloudMediaFiles) {
+          fs.renameSync(
+            `${cloudMediaDir}/${file}`,
+            `${cloudMediaDir}/${file}.png`
+          )
+        }
+    
+        getGeoJsonFromKml();
+      } else {
+        throw new Error('Erro de extração do KMZ');
       }
     })
-
-  const itemsInFolder = fs.readdirSync(kmlCloudMediaDir);
-    
-  // check if doc.kml and cloud_media exist
-  if (itemsInFolder.length > 1) {
-    const cloudMediaDir = `${kmlCloudMediaDir}/cloud_media`,
-          cloudMediaFiles = fs.readdirSync(cloudMediaDir);
-
-    photosAmount = cloudMediaFiles.length;
-
-    for await (const file of cloudMediaFiles) {
-      fs.renameSync(
-        `${cloudMediaDir}/${file}`,
-        `${cloudMediaDir}/${file}.png`
-      )
-    }
-
-    getGeoJsonFromKml();
-  } else {
-    throw new Error('Erro de extração do KMZ');
-  }
 }
 
 async function getGeoJsonFromKml() {
-  const GEOJSON = await convertKmlToGeoJson(`${kmlCloudMediaDir}/doc.kml`)
+  GEOJSON = await convertKmlToGeoJson(`${kmlMediaDir}/doc.kml`)
 
-  // console.log(GEOJSON);
-  
   await GEOJSON.features.forEach((marker: any) => {
-    const poleName = JSON.stringify(marker.properties.name);
+    if (marker.properties.name) {
+      const pole = JSON.stringify(marker.properties.name).replace(/["​]/g, ''),
+            photos = marker.properties.com_exlyo_mapmarker_images_with_ext as string;
 
-    if (poleName) {
-      const pole = poleName.replace(/"/g, '').replace(/​/g, '');
-
-      if (pole.includes('.')) {
-        console.log(chalk.bgYellow.black(`O marcador ${pole} foi ignorado pois ainda não há suporte a casas decimais`));
+      if (photos && !renamedMediaFolder) { 
+        const photosObject = JSON.parse(photos) as Array<any>,
+        mediaFolderName = photosObject[0].file_rel_path.match(/(\S+)\//)[1] as string;
+        
+        fs.readdirSync(kmlMediaDir, { withFileTypes: true })
+          .filter(dirent => dirent.isDirectory())
+          .map(async dirent => {
+            fs.renameSync(
+              `${kmlMediaDir}/${dirent.name}`,
+              `${kmlMediaDir}/${mediaFolderName}`  
+            );
+          })
       }
 
-      if (Number(pole) && !pole.includes('.')) polesAmount++;
-    }
+      if (pole) {;
+        if (pole.includes('.')) {
+          console.log(chalk.bgYellow.black(`O marcador ${pole} foi ignorado pois ainda não há suporte a casas decimais`));
+        }
 
-    polesAmountImmutable = polesAmount;
+        if (Number(pole) && !pole.includes('.')) polesAmount++;
+      }
+
+      polesAmountImmutable = polesAmount;
+    }
   })
 
   for (let index = 0; index <= polesAmountImmutable; index++) {
     GEOJSON.features.filter((marker: any) => {
       if (marker.properties.name) {
-        const poleName = JSON.stringify(marker.properties.name);
-        const pole = parseFloat(poleName.replace(/"/g, '').replace(/​/g, '')),
-              photos = marker.properties.com_exlyo_mapmarker_images_with_ext as
-              | string
-              | undefined,
+        const markerIdentifier = JSON.stringify(marker.properties.name).replace(/["​]/g, '');
+
+        // parseFloat to identify decimal places
+        const pole = parseFloat(markerIdentifier),
+              photos = marker.properties.com_exlyo_mapmarker_images_with_ext,
               coordinates = marker.geometry.coordinates as Array<number>;
 
         let   leftPhoto,
               rightPhoto;
 
         if (photos) {
-          const photosObject = JSON.parse(photos as string);
+          const photosObject = JSON.parse(photos);
           leftPhoto = photosObject[0];
           rightPhoto = photosObject[1];
         } else {
@@ -334,7 +342,7 @@ async function createColumns(polesInLeftColumn: any[][], polesInRightColumn: any
     photos.push(leftAndRightColumnWithTablesAndPhotos);
     
     if (photos.length === POLES_IN_PDF / 2) {
-      polesAmount = polesAmount - POLES_IN_PDF;
+      polesAmount -= POLES_IN_PDF;
       
       await createPDF();
     }
@@ -345,9 +353,7 @@ async function createColumns(polesInLeftColumn: any[][], polesInRightColumn: any
       photos.length === Math.ceil(polesAmount / 2)
     ) {
       createPDF();
-      setTimeout(() => {
-        mergePDFS();
-      }, 500)
+      setTimeout(() => { mergePDFS() }, 1000)
     }
   })
 }
@@ -362,7 +368,6 @@ function mergePDFS() {
 
   merger.save(`output/relatorio.pdf`);
 
-  console.log('');
   console.log(`${chalk.greenBright(`RELATÓRIO GERADO`)} ${chalk.gray(`[${(Date.now() - startTime) / 1000}s]`)}`);
   console.log('');
   console.log(`Total de postes: ${chalk.rgb(255, 110, 0)(polesAmountImmutable)}`);
