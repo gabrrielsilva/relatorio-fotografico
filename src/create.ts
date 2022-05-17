@@ -33,7 +33,7 @@ export function createPDF() {
       PDF.pipe(writeStream);
       PDF.end();
 
-      writeStream.on('end', (resolve));
+      writeStream.on('end', resolve);
       
       photos.length = 0;
       polesInLeftColumn.length = 0;

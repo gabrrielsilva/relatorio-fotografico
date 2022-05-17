@@ -2,6 +2,9 @@ import chalk from 'chalk';
 import fs from 'fs';
 import readline from 'readline';
 
+export let header: {},
+           startTime = 0;
+
 interface Header {
   id: string;
   titulo: string;
@@ -11,17 +14,13 @@ interface Header {
   versao: string;
 }
 
+let   headerData: Header = {} as Header;
+
 const imagesDir = `src/static/images`,
       leftLogoDir = `${imagesDir}/left-logo`,
       rightLogoDir = `${imagesDir}/right-logo`,
       leftLogo = fs.readdirSync(leftLogoDir),
       rightLogo = fs.readdirSync(rightLogoDir);
-      
-let   headerData: Header = {} as Header;
-
-export let header: {};
-
-export let startTime = 0;
 
 export async function setHeader() {
   const user = readline.createInterface({
@@ -46,9 +45,6 @@ export async function setHeader() {
   await createQuestion('local'),
   await createQuestion('site/abordagem'),
   await createQuestion('versao')
-
-  console.log('');
-  console.log(chalk.magentaBright('Processando...\n'));
 
   startTime = Date.now();
   

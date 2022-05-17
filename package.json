@@ -10,14 +10,19 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@ilovepdf/ilovepdf-nodejs": "^0.1.2",
     "@tmcw/togeojson": "^5.1.2",
+    "boxen": "^5.1.2",
     "chalk": "^4.1.2",
+    "cli-spinner": "^0.2.10",
     "decompress": "^4.2.1",
+    "dotenv": "^16.0.1",
     "pdf-merger-js": "^3.4.0",
     "pdfmake": "^0.2.5",
     "xmldom": "^0.6.0"
   },
   "devDependencies": {
+    "@types/cli-spinner": "^0.2.1",
     "@types/decompress": "^4.2.4",
     "@types/node": "^17.0.32",
     "@types/pdfmake": "^0.1.21",
