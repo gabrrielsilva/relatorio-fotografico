@@ -1,53 +1,63 @@
-import chalk from 'chalk';
 import fs from 'fs';
-import readline from 'readline';
+import inquirer from 'inquirer';
 
 export let header: {},
-           startTime = 0;
+  startTime = 0;
 
-interface Header {
+type Answer = {
   id: string;
   titulo: string;
   seguimento: string;
   local: string;
-  site_abordagem: string;
+  siteAbordagem: string;
   versao: string;
-}
+  logoEsquerda: string;
+  logoDireita: string;
+};
 
-let   headerData: Header = {} as Header;
-
-const imagesDir = `src/static/images`,
-      leftLogoDir = `${imagesDir}/left-logo`,
-      rightLogoDir = `${imagesDir}/right-logo`,
-      leftLogo = fs.readdirSync(leftLogoDir),
-      rightLogo = fs.readdirSync(rightLogoDir);
+const logosDir = 'src/static/images/logos',
+  logos = fs.readdirSync(logosDir);
 
 export async function setHeader() {
-  const user = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  })
+  const question = (
+    name: string,
+    message: string,
+    type: string,
+    choices?: string[]
+  ) => {
+    return {
+      name,
+      message,
+      type,
+      choices,
+    };
+  };
 
-  const questionColor = chalk.inverse;
-  const createQuestion = (field: string) => {
-    const headerProperty = field.toLowerCase().replace(/\//g, '_');
+  const answer: Answer = await inquirer.prompt([
+    question('id', 'Qual o id do projeto?', 'input'),
+    question('titulo', 'Qual o título do projeto?', 'input'),
+    question('seguimento', 'Qual o seguimento do projeto?', 'input'),
+    question('local', 'Qual o local do projeto?', 'input'),
+    question('siteAbordagem', 'Qual o site/abordagem do projeto?', 'input'),
+    question('versao', 'Qual a versão do projeto?', 'input'),
+    question(
+      'logoEsquerda',
+      'Escolha a logo esquerda do relatório',
+      'list',
+      logos
+    ),
+    question(
+      'logoDireita',
+      'Escolha a logo direita do relatório',
+      'list',
+      logos
+    ),
+  ]);
 
-    return new Promise((resolve) => {
-      user.question(questionColor(`Qual o ${field} do projeto?\n`), (answer: any) =>
-        resolve(headerData[headerProperty as keyof Header] = answer)
-      )
-    })
-  }
-
-  await createQuestion('id'),
-  await createQuestion('titulo'),
-  await createQuestion('seguimento'),
-  await createQuestion('local'),
-  await createQuestion('site/abordagem'),
-  await createQuestion('versao')
+  console.log('');
 
   startTime = Date.now();
-  
+
   header = {
     style: 'header',
     table: {
@@ -57,29 +67,29 @@ export async function setHeader() {
         [
           {
             rowSpan: 4,
-            image: `${leftLogoDir}/${leftLogo[0]}`,
+            image: `${logosDir}/${answer.logoEsquerda}`,
             fit: [100, 100],
             alignment: 'center',
             margin: [0, 10],
           },
           {
             rowSpan: 2,
-            text: `Relatório fotográfico\n${headerData.seguimento}`,
+            text: `Relatório fotográfico\n${answer.seguimento}`,
             style: 'titleHeader',
           },
           {
             rowSpan: 2,
-            text: `ID SGI/GL SGP\n ${headerData.id}`,
+            text: `ID SGI/GL SGP\n ${answer.id}`,
             style: 'infoHeader',
           },
           {
             rowSpan: 2,
-            text: `SITE/ABORD\n ${headerData.site_abordagem}`,
+            text: `SITE/ABORD\n ${answer.siteAbordagem}`,
             style: 'infoHeader',
           },
           {
             rowSpan: 4,
-            image: `${rightLogoDir}/${rightLogo[0]}`,
+            image: `${logosDir}/${answer.logoDireita}`,
             fit: [100, 100],
             alignment: 'center',
             margin: [0, 10],
@@ -89,7 +99,7 @@ export async function setHeader() {
         [
           '',
           {
-            text: `PROJETO: ${headerData.titulo}`,
+            text: `PROJETO: ${answer.titulo}`,
             style: 'infoHeader',
           },
           {
@@ -99,7 +109,7 @@ export async function setHeader() {
           },
           {
             rowSpan: 2,
-            text: `VERSÃO\n ${headerData.versao}`,
+            text: `VERSÃO\n ${answer.versao}`,
             style: 'infoHeader',
           },
           '',
@@ -107,7 +117,7 @@ export async function setHeader() {
         [
           '',
           {
-            text: `LOCALIDADE: ${headerData.local}`,
+            text: `LOCALIDADE: ${answer.local}`,
             style: 'infoHeader',
           },
           '',
