@@ -245,8 +245,9 @@ function splitColumns(
   if (
     polesInLeftColumn.length - polesInRightColumn.length > 1 ||
     polesInRightColumn.length - polesInLeftColumn.length > 1
-  )
+  ) {
     throw new Error(chalk.redBright('Há algum marcador intruso ou faltando!'));
+  }
 
   const polesInMemory = polesInLeftColumn.length + polesInRightColumn.length;
 
@@ -344,7 +345,7 @@ async function createColumns() {
     if (photos.length === polesInPdf / 2) {
       polesAmountRecursive -= polesInPdf;
 
-      await createPDF();
+      createPDF();
     }
 
     // last pdf
@@ -352,8 +353,14 @@ async function createColumns() {
       polesAmountRecursive < polesInPdf &&
       photos.length === Math.ceil(polesAmountRecursive / 2)
     ) {
+      // calls merge straight, because there are no undergrounds
+      if (undergroundMarkersAmount <= 0) {
+        lastPdf = true;
+      }
+
       createPDF();
-      handleUndergrounds();
+
+      if (undergroundMarkersAmount > 0) handleUndergrounds();
     }
   });
 }
